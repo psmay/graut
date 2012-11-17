@@ -41,14 +41,21 @@ findAll = (dir, filter) ->
 coffeeFiles = (findAll SRC, (lead, filename) -> filename.match /\.coffee$/).map ([parents, file]) ->
 	[parents.slice(1), file]
 
+binFiles = (findAll "#{SRC}/bin").map ([parents, file]) ->
+	[['bin'].concat(parents.slice(1)), file]
+
 task 'build', 'build graut from source', (cb) ->
-	files = ("#{SRC}/#{file}" for file in (fs.readdirSync SRC) when file.match /\.coffee$/)
-	console.log files
 	for [parents, file] in coffeeFiles
 		srcFile = [SRC].concat(parents, [file]).join "/"
 		destDir = [BUILD].concat(parents).join "/"
 		console.log "Compile #{srcFile} into #{destDir}"
 		run ['-c', '-o', destDir, srcFile], cb
+	exec "mkdir -p #{BUILD}/bin", (err) -> throw err if err
+	for [parents, file] in binFiles
+		srcFile = [SRC].concat(parents, [file]).join "/"
+		destFile = [BUILD].concat(parents, [file]).join "/"
+		console.log "Copy #{srcFile} to #{destFile}"
+		exec "cp -rf '#{srcFile}' '#{destFile}'", (err) -> throw err if err
 
 task 'clean', 'remove build files', (cb) ->
 	exec "rm -rf #{BUILD}", (err) ->

@@ -1,0 +1,5 @@
+#!/bin/sh
+
+echo "This is a placeholder for the eventual implementation of a command that calls something within the graut lib." >&2
+
+
