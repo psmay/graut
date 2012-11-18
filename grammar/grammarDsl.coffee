@@ -41,7 +41,7 @@ exports.convertToParserSpec = (startSymbol, rules) ->
 		action = if match = unwrap.exec action then match[1] else "(#{action}())"
 		# Prefix our local stuff with yy. so the parser stuff can see it
 		action = action.replace /\b(?:new|instanceof) /g, '$&yy.'
-		action = action.replace /\bparseError\b/g, 'yy.$&'
+		action = action.replace /\bsemanticError\b/g, 'yy.$&'
 		[patternString, "$$ = #{action};", options]
 	
 	bnf = {}

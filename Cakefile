@@ -29,9 +29,10 @@ jsNotice = "/*\n#{notice}\n*/\n"
 
 BUILD = "./build"
 DIST = "#{BUILD}/dist"
+DIST_LIBS = "#{DIST}/lib/graut"
 SRC = "./src"
 GRAMMAR = "./grammar"
-GRAMMAR_DEST = "#{DIST}/lib/graut/parser.js"
+GRAMMAR_DEST = "#{DIST_LIBS}/parser.js"
 
 # Run coffee
 coffee = (args, cb) ->
@@ -106,10 +107,12 @@ directFiles = findAllRelative "#{SRC}/bin",
 	(rel) ->
 		[ [ "#{SRC}/bin/#{rel}", "#{DIST}/bin/#{rel}" ] ]
 
-task 'build', 'build graut from source', (cb) ->
+buildAll = (cb) ->
 	buildDirectCopies cb
 	buildLibs cb
 	buildParser cb
+
+task 'build', 'build graut from source', buildAll
 
 buildDirectCopies = (cb) ->
 	mkdirp "#{DIST}/bin"
@@ -128,9 +131,18 @@ buildParser = (cb) ->
 	mkdirp destDir
 	console.log "Generating grammar #{srcGrammar} to #{destFile}"
 	parser = (require srcGrammar).parser
-	fs.writeFile destFile, jsNotice + parser.generate()
+	output = parser.generate()
+	output = jsNotice + output
+	fs.writeFileSync destFile, jsNotice + output
 
 
 task 'clean', 'remove build files', (cb) ->
 	exec "rm -rf #{BUILD}", (err) ->
 		throw err if err
+
+
+task 'test', 'perform a nominal test', (cb) ->
+	invoke 'build'
+	main = require "#{DIST_LIBS}/main"
+	out = main.parseFile "test-input/1.txt"
+	console.log out.toString()

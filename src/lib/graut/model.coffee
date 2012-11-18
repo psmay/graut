@@ -25,33 +25,117 @@ extend = (obj, src) ->
 	obj[key] = value for own key, value of src
 	obj
 
+isArray = (item) -> Object.prototype.toString.call(item) is '[object Array]'
+isBoolean = (item) -> Boolean(item) is item
+isNode = (item) -> item instanceof Node
+isToken = (item) -> item? and item.type? and item.text? and item.startLine?
+isTokenOrUnused = (item) -> if item? then isToken(item) else true
+
+assertType = (expected, value, test) ->
+	unless test value
+		throw Error "Assert failed: Wrong type; expected #{expected}, got #{value}"
+
+assertArray = (item) -> assertType "array", item, isArray
+assertBoolean = (item) -> assertType "boolean", item, isBoolean
+assertNode = (item) -> assertType "node", item, isNode
+assertToken = (item) -> assertType "token", item, isToken
+assertTokenOrUnused = (item) -> assertType "token or unused", item, isTokenOrUnused
+
+
+
+TAB = "  "
+
+render = (item, pfx) ->
+	if not item?
+		""
+	else if item.toPrefixedString
+		item.toPrefixedString pfx
+	else if isArray item
+		renderings = for e in item
+			pfx + "<element>\n" + render(e, pfx + "#{TAB}")
+		renderings.join ""
+	else
+		str = if item.toLogString
+			item.toLogString()
+		else
+			item.toString()
+		pfx + str + "\n"
+
+class Node
+	nodeType : "Node"
+	
+	constructor: (@token) ->
+		if @token isnt null and not @token.text?
+			throw new Error "Assert failed: #{@token} is not a token"
+	
+	toString : () -> @toPrefixedString("")
+	
+	
+	toPrefixedString : (pfx) ->
+		text = []
+		text.push pfx + "[#{@nodeType}]\n"
+		
+		for own p, v of @
+			if v?
+				text.push pfx + "#{TAB}#{p}:\n"
+				text.push render(v, pfx + "#{TAB}#{TAB}")
+		text.join ""
+
+
 extend exports,
-	InterpolatedValue: class InterpolatedValue
-		constructor: (@token, @values, @open, @close) ->
+	InterpolatedValue: class InterpolatedValue extends Node
+		nodeType : "Interpolated"
+		constructor: ({ @values, @startToken, @endToken }) ->
+			assertTokenOrUnused @startToken
+			assertTokenOrUnused @endToken
+			assertArray @values
 	
-	StringValue: class StringValue
-		constructor: (@token, @rawText, @doBslashEscapes, @open, @close) ->
+	StringValue: class StringValue extends Node
+		nodeType : "String"
+		constructor: ({ @textToken, @doBslashEscapes, @openToken, @closeToken }) ->
+			assertTokenOrUnused @openToken
+			assertTokenOrUnused @closeToken
+			assertToken @textToken
+			@doBslashEscapes ?= false
+			assertBoolean @doBslashEscapes
 
-	ListValue: class ListValue
-		constructor: (@token, @values) ->
+	ListValue: class ListValue extends Node
+		nodeType : "List"
+		constructor: ({ @values, @openToken, @closeToken }) ->
+			assertToken @openToken
+			assertToken @closeToken
+			assertArray @values
 
-	InlineOp: class InlineOp
-		constructor: (@token, @topic) ->
+	InlineOp: class InlineOp extends Node
+		nodeType : "Inline"
+		constructor: ({ @sigilToken, @topic }) ->
+			assertToken @sigilToken
+			assertNode @topic
 
-	ExpandOp: class ExpandOp
-		constructor: (@token, @topic) ->
+	ExpandOp: class ExpandOp extends Node
+		nodeType : "Expand"
+		constructor: ({ @sigilToken, @topic }) ->
+			assertToken @sigilToken
+			assertNode @topic
 
-	ApplyOp: class ApplyOp
-		constructor: (@token, @topic) ->
+	CallOp: class CallOp extends Node
+		nodeType : "Call"
+		constructor: ({ @sigilToken, @topic }) ->
+			assertToken @sigilToken
+			assertNode @topic
 	
-	NonceOp: class NonceOp
-		constructor: (@token) ->
+	NonceOp: class NonceOp extends Node
+		nodeType : "Nonce"
+		constructor: ({ @sigilToken }) ->
+			assertToken @sigilToken
 	
-	parseError: (tokenInfo, message) ->
+	semanticError: (tokenInfo, message) ->
 		locator = if tokenInfo?
 			"#{tokenInfo.startLine}:#{tokenInfo.startColumn}: "
 		else
 			""
 		message ?= "Assert failed"
 
+		console.log "parseError called with ", tokenInfo, message
+		console.log "---"
 		throw new Error "#{locator}#{message}"

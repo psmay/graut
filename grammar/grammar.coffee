@@ -32,8 +32,10 @@ o = (elements...) -> elements
 
 parserSpec = dsl.convertToParserSpec 'Top',
 	Top: [
-		o '', -> new InterpolatedValue null, []
-		o 'TopElements', -> new InterpolatedValue null, $1
+		o '', -> new InterpolatedValue
+			values: []
+		o 'TopElements', -> new InterpolatedValue
+			values: $1
 	]
 	TopElements: [
 		o 'TopElement', -> [$1]
@@ -44,23 +46,31 @@ parserSpec = dsl.convertToParserSpec 'Top',
 		o 'Sigiled', -> $1
 	]
 	TopText: [
-		o 'TEXT', -> new StringValue $1, false
+		o 'TEXT', -> new StringValue
+			textToken: $1
 	]
 	Sigiled: [
-		o 'SIGIL Element',	->
+		o 'SIGIL Topic',	->
 			sigil = $1
 			elem = $2
 			if elem is null
 				switch sigil.text
-					when "$" then new EmptyOp sigil
-					else parseError sigil, "This sigil requires a topic"
+					when "$" then new EmptyOp
+						sigilToken: sigil
+					else semanticError sigil, "This sigil requires a topic"
 			else if elem instanceof InlineOp
-				parseError elem, "Inlined elements cannot be used as sigil topic"
+				semanticError elem, "Inlined elements cannot be used as sigil topic"
 			else switch sigil.text
-				when "#" then new CallOp sigil, elem
-				when "$" then new ExpandOp sigil, elem
-				when "@" then new InlineOp sigil, elem
-				else parseError sigil, "Assert failed: Unrecognized sigil"
+				when "#" then new CallOp
+					sigilToken: sigil
+					topic: elem
+				when "$" then new ExpandOp
+					sigilToken: sigil
+					topic: elem
+				when "@" then new InlineOp
+					sigilToken: sigil
+					topic: elem
+				else semanticError sigil, "Assert failed: Unrecognized sigil"
 	]
 	Topic: [
 		o 'Element', -> $1
@@ -74,7 +84,7 @@ parserSpec = dsl.convertToParserSpec 'Top',
 		o ''
 	]
 	SsElementsOpt: [
-		o 'SsElements',						-> [$1]
+		o 'SsElements',						-> $1
 		o '',								-> []
 	]
 	# Space-suffixed
@@ -95,7 +105,10 @@ parserSpec = dsl.convertToParserSpec 'Top',
 		o 'SpaceOpt SsElementsOpt', -> $2
 	]
 	List: [
-		o 'UP ListContents DOWN', -> new ListValue $2[0..]
+		o 'DOWN ListContents UP', -> new ListValue
+			openToken: $1
+			values: $2
+			closeToken: $3
 	]
 	PlainText: [
 		o 'UnquotedString', -> $1
@@ -107,19 +120,24 @@ parserSpec = dsl.convertToParserSpec 'Top',
 		o 'DeepHeredoc', -> $1
 	]
 	UnquotedString: [
-		o 'STRING0', -> new StringValue $1, false
+		o 'STRING0', -> new StringValue
+			textToken: $1
 	]
 	TriquotedString: [
-		o 'STRING3START TriquotedText STRING3END', ->
-			new StringValue $2, false, $1, $3
+		o 'STRING3START TriquotedText STRING3END', -> new StringValue
+			textToken: $2
+			openToken: $1
+			closeToken: $3
 	]
 	TriquotedText: [
 		o 'STRING3TEXT', -> $1
 		o '', -> ''
 	]
 	ShallowHeredoc: [
-		o 'SHSTART ShallowHeredocText SHEND', ->
-			new StringValue $2, false, $1, $3
+		o 'SHSTART ShallowHeredocText SHEND', -> new StringValue
+			textToken: $2
+			openToken: $1
+			closeToken: $3
 	]
 	ShallowHeredocText: [
 		o 'SHTEXT', -> $1
@@ -127,7 +145,10 @@ parserSpec = dsl.convertToParserSpec 'Top',
 	]
 	MonoquotedString: [
 		o 'STRING1START MonoquotedPartsOpt STRING1END', ->
-			new InterpolatedValue $2, $1, $3
+			new InterpolatedValue
+				values: $2
+				startToken: $1
+				endToken: $3
 	]
 	MonoquotedPartsOpt: [
 		o 'MonoquotedParts', -> $1
@@ -142,11 +163,16 @@ parserSpec = dsl.convertToParserSpec 'Top',
 		o 'Sigiled', -> $1
 	]
 	MonoquotedText: [
-		o 'STRING1TEXT', -> new StringValue $1, true
+		o 'STRING1TEXT', -> new StringValue
+			textToken: $1
+			doBslashEscapes: true
 	]
 	DeepHeredoc: [
 		o 'DHSTART DeepHeredocPartsOpt DHEND', ->
-			new InterpolatedValue $2, $1, $3
+			new InterpolatedValue
+				values: $2
+				startToken: $1
+				endToken: $3
 	]
 	DeepHeredocPartsOpt: [
 		o 'DeepHeredocParts', -> $1
@@ -161,7 +187,9 @@ parserSpec = dsl.convertToParserSpec 'Top',
 		o 'Sigiled', -> $1
 	]
 	DeepHeredocText: [
-		o 'DHTEXT', -> new StringValue $1, true
+		o 'DHTEXT', -> new StringValue
+			textToken: $1
+			doBslashEscapes: true
 	]
 
 { Parser } = require 'jison'

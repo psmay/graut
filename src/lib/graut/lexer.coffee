@@ -77,7 +77,8 @@ Lexer = (exports ? this).Lexer =
 		return new TokenizerSession(input, callback)
 	
 	jisonLexer : () ->
-		_setPosition(line, col) ->
+		setSourceKey : (str) -> @_sourceKey
+		_setPosition : (line, col) ->
 			@yylineno = line
 			@_positionNumber = col
 		
@@ -85,26 +86,31 @@ Lexer = (exports ? this).Lexer =
 			@pullSession = Lexer.pullTokenizer(input)
 			@_setPosition(0,0)
 		
-		showPosition : () -> @_positionNumber
+		showPosition : () ->
+			fl = if @_sourceKey? then "#{@_sourceKey}:" else ""
+			"#{fl}#{@yylineno + FIRST_LINE}:#{@_positionNumber}:"
 		lex : () ->
+			console.log "Lex called"
 			type = ""
-			@pullSession.tryNext (ext) ->
+			gotNext = @pullSession.tryNext (ext) =>
 				@yytext = ext
 				@_setPosition(ext.startLine - FIRST_LINE, ext.startColumn)
 				type = ext.type
+			console.log "gotNext: #{gotNext}"
+			console.log "fat token is #{@yytext.toLogString()}"
 			type
 
 class TokenInfo
-	constructor = (list) ->
+	constructor : (list) ->
 		[@type, @text, @startLine, @startColumn, @endLine, @endColumn] = list
 	
 	@create = (info...) -> new TokenInfo(info)
 	
-	visit = (fn) ->
+	visit : (fn) ->
 		fn(@type, @text, @startLine, @startColumn, @endLine, @endColumn)
 	
-	toString = () -> @text
-	toLogString = () ->
+	toString : () -> @text
+	toLogString : () ->
 		"[" +
 		"#{@startLine}:#{@startColumn}-#{@endLine}:#{@endColumn} " +
 		"#{@type} #{JSON.stringify(@text)}]"
@@ -223,6 +229,7 @@ class TokenizerSession
 		lpost = @line
 		cpost = @column
 		
+		console.log "Lexer emits #{tokenName} #{lpre}:#{cpre} #{lpost}:#{cpost}"
 		@callback(tokenName, text, lpre, cpre, lpost, cpost)
 		
 

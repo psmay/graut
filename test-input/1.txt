@@ -1,0 +1,64 @@
+// A bunch of inline names
+int #(convert (q example alpha) (q example bravo))(int);
+
+#(nop"""
+	Here comes a big damn comment.
+	Note that it is just a string that happens
+	to be inside a #(nop) call.
+""")
+// A possible definition for a qualified tag enum
+#(= QA q example alpha)
+#(= QB q example bravo)
+#(= QC q example charlie)
+#(= QM q example A123)
+#(= QN q example 321A)
+#(= TS t $QA $QB $QC $QM $QN)
+ 
+#(nop <TOK<
+	Another comment, this one in a shallow heredoc.
+	The heredoc guards accepts all text until the matching
+	closure. It has to match, so for example >FOO> won't
+	do anything even though it looks like a close.
+>TOK>)
+
+#(nop <<TOK<
+	Here's another one. This is a deep heredoc, so nested
+	function calls #(nop like this one) can happen. Other than
+	that there is no exit except the close, which >FOO>> is not.
+>TOK>>)
+
+enum {
+	#(ek $TS $QA) = 1,
+	// expands to
+	// #(ek (t $QA $QB $QC $QM $QN) (q example alpha) ) = 1,
+	// and then to
+	// #(ek (t (q example alpha) (q example bravo) (q example charlie) (q example A123) (q example 321A) ) (q example alpha) ) = 1,
+	#(ek $TS $QB),
+	#(ek $TS $QC),
+	#(ek $TS $QM),
+	#(ek $TS $QN)
+};
+
+#(nop "Now, here's something you might not have known:
+	Single-quoted strings can also be multiple lines
+	long and also interpolate calls #(nop such as this
+	one). A single-quoted string also supports backslash
+	escapes, so you can include a quote \" or a call-looking
+	non-call : \#( not interpreted ), #\(also not interpreted).
+	The lexer doesn't process the escapes, though; it merely
+	lexes past them. The parser receives the raw text.
+")
+ 
+// ...
+sometag = #(ek $TS $QC);
+otrotag = #(ek $TS $QM);
+// ...
+ 
+// Inlining
+#(= X1 abc def ghi)
+#(= X2 jkl mno pqr)
+const int #(foo $X1 $X2) = 9000;
+// resolves to const int #(foo (abc def ghi) (jkl mno pqr)) = 9000;
+const int #(foo @X1 @X2) = 9001;
+// resolves to const int #(foo abc def ghi jkl mno pqr) = 9001;
+
