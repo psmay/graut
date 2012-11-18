@@ -3,59 +3,91 @@ path = require 'path'
 {spawn, exec} = require 'child_process'
 
 BUILD = "build"
-BUILD_LIBS = "#{BUILD}/lib/graut"
-BUILD_BIN = "#{BUILD}/bin"
+DIST = "#{BUILD}/dist"
 SRC = "src"
 
-header = """
-"""
-
-#sources = [
-#	'lexer'
-#	'grammarDsl'
-#	'grammar'
-#	'model'
-#].map (filename) -> "#{SRC}/#{filename}.coffee"
-
-run = (args, cb) ->
+# Run coffee
+coffee = (args, cb) ->
 	proc = spawn 'coffee', args
 	proc.stderr.on 'data', (buffer) -> console.log buffer.toString()
 	proc.on 'exit', (status) ->
 		process.exit 1 if status isnt 0
 		cb() if typeof cb is 'function'
 
-findAll = (dir, filter) ->
+# Compile with coffee
+coffeeco = (srcFile, destDir, cb) ->
+	console.log "Compile #{srcFile} into #{destDir}"
+	coffee ['-c', '-o', destDir, srcFile], cb
+
+# Run mkdir -p
+mkdirp = (dir) ->
+	console.log "Create directory '#{dir}'"
+	exec "mkdir -p '#{dir}'", (err) -> throw err if err
+
+# Run cp -rf
+cprf = (srcFile, destFile) ->
+	console.log "Copy #{srcFile} to #{destFile}"
+	exec "cp -rf '#{srcFile}' '#{destFile}'", (err) -> throw err if err
+
+# Recurse, hitting every filename as both its path relative to here and its
+# path relative to the start path.
+findAllRelative = (path, filter, process) ->
 	result = []
+	
 	filter ?= -> true
-	recurse = (leadingDirs...) ->
-		filenames = fs.readdirSync leadingDirs.join "/"
-		for filename in filenames
-			if filter leadingDirs, filename
-				result.push [leadingDirs, filename]
-			all = leadingDirs.concat([filename])
-			if fs.statSync(all.join "/").isDirectory()
-				recurse all...
-	recurse dir
+	process ?= (rel, full) -> rel
+	
+	add = (z) ->
+		listVersion = [].concat z
+		result.push listVersion...
+	
+	recurse = (relSubDir) ->
+		fullParent = if relSubDir? then "#{path}/#{relSubDir}" else path
+		relPrefix = if relSubDir? then "#{relSubDir}/" else ""
+		
+		names = fs.readdirSync fullParent
+		for name in names
+			rel = "#{relPrefix}#{name}"
+			full = "#{fullParent}/#{name}"
+			
+			if filter rel, full
+				add process(rel, full)
+			if fs.statSync(full).isDirectory()
+				recurse rel
+	
+	recurse()
 	result
 
-coffeeFiles = (findAll SRC, (lead, filename) -> filename.match /\.coffee$/).map ([parents, file]) ->
-	[parents.slice(1), file]
+# Remove parent dirs from a filename.
+stripDirs = (name) ->
+	[all, lead] = /// ^(?:(.*)/)?.*?$ ///.exec name
+	if lead?
+		if lead is "" then "/" else lead
+	else
+		"."
 
-binFiles = (findAll "#{SRC}/bin").map ([parents, file]) ->
-	[['bin'].concat(parents.slice(1)), file]
+# Locate sources, and make a list pairing each source with its corresponding
+# build product.
+
+coffeeFiles = findAllRelative SRC,
+	( (name) -> name.match /\.coffee$/ ),
+	(rel) ->
+		[ [ "#{SRC}/#{rel}", "#{DIST}/#{rel.replace(/\.coffee$/,'.js')}" ] ]
+
+directFiles = findAllRelative "#{SRC}/bin",
+	( (name, full) -> ! fs.statSync(full).isDirectory() ),
+	(rel) ->
+		[ [ "#{SRC}/bin/#{rel}", "#{DIST}/bin/#{rel}" ] ]
+
 
 task 'build', 'build graut from source', (cb) ->
-	for [parents, file] in coffeeFiles
-		srcFile = [SRC].concat(parents, [file]).join "/"
-		destDir = [BUILD].concat(parents).join "/"
-		console.log "Compile #{srcFile} into #{destDir}"
-		run ['-c', '-o', destDir, srcFile], cb
-	exec "mkdir -p #{BUILD}/bin", (err) -> throw err if err
-	for [parents, file] in binFiles
-		srcFile = [SRC].concat(parents, [file]).join "/"
-		destFile = [BUILD].concat(parents, [file]).join "/"
-		console.log "Copy #{srcFile} to #{destFile}"
-		exec "cp -rf '#{srcFile}' '#{destFile}'", (err) -> throw err if err
+	mkdirp "#{DIST}/bin"
+	for [srcFile, destFile] in directFiles
+		cprf srcFile, destFile
+	
+	for [srcFile, destFile] in coffeeFiles
+		destDir = stripDirs destFile
+		coffeeco srcFile, destDir, cb
 
 task 'clean', 'remove build files', (cb) ->
 	exec "rm -rf #{BUILD}", (err) ->
