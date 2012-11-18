@@ -2,9 +2,36 @@ fs = require 'fs'
 path = require 'path'
 {spawn, exec} = require 'child_process'
 
-BUILD = "build"
+notice = """
+graut
+Copyright (c) 2012 Peter S. May (halfgeek.org)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+of the Software, and to permit persons to whom the Software is furnished to do
+so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+"""
+
+jsNotice = "/*\n#{notice}\n*/\n"
+
+BUILD = "./build"
 DIST = "#{BUILD}/dist"
-SRC = "src"
+SRC = "./src"
+GRAMMAR = "./grammar"
+GRAMMAR_DEST = "#{DIST}/lib/graut/parser.js"
 
 # Run coffee
 coffee = (args, cb) ->
@@ -79,15 +106,30 @@ directFiles = findAllRelative "#{SRC}/bin",
 	(rel) ->
 		[ [ "#{SRC}/bin/#{rel}", "#{DIST}/bin/#{rel}" ] ]
 
-
 task 'build', 'build graut from source', (cb) ->
+	buildDirectCopies cb
+	buildLibs cb
+	buildParser cb
+
+buildDirectCopies = (cb) ->
 	mkdirp "#{DIST}/bin"
 	for [srcFile, destFile] in directFiles
 		cprf srcFile, destFile
 	
+buildLibs = (cb) ->
 	for [srcFile, destFile] in coffeeFiles
 		destDir = stripDirs destFile
 		coffeeco srcFile, destDir, cb
+
+buildParser = (cb) ->
+	srcGrammar = "#{GRAMMAR}/grammar"
+	destFile = "#{GRAMMAR_DEST}"
+	destDir = stripDirs destFile
+	mkdirp destDir
+	console.log "Generating grammar #{srcGrammar} to #{destFile}"
+	parser = (require srcGrammar).parser
+	fs.writeFile destFile, jsNotice + parser.generate()
+
 
 task 'clean', 'remove build files', (cb) ->
 	exec "rm -rf #{BUILD}", (err) ->
