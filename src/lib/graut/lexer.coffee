@@ -67,7 +67,7 @@ SOFTWARE.
 # are counted as one column regardless of input encoding. (They don't appear in
 # valid UTF-8 or UTF-32, but many implementations don't enforce this.)
 
-{ createTokenInfo } = require './model'
+{ createToken } = require './model'
 
 FIRST_LINE = 1
 FIRST_COLUMN = 1
@@ -136,7 +136,7 @@ class PullTokenizer
 class PushTokenizer
 	constructor: (input, callback) ->
 		@_session = new TokenizerSession input, (stats...) =>
-			callback(createTokenInfo(stats...))
+			callback(createToken(stats...))
 	run : () -> @_session.run()
 	unfinished : () -> @_session.unfinished()
 	runAll : () -> @run() while @unfinished()
