@@ -28,7 +28,7 @@ extend = (obj, src) ->
 isArray = (item) -> Object.prototype.toString.call(item) is '[object Array]'
 isBoolean = (item) -> Boolean(item) is item
 isNode = (item) -> item instanceof Node
-isToken = (item) -> item? and item.type? and item.text? and item.startLine?
+isToken = (item) -> item instanceof TokenInfo
 isTokenOrUnused = (item) -> if item? then isToken(item) else true
 
 assertType = (expected, value, test) ->
@@ -60,6 +60,23 @@ render = (item, pfx) ->
 		else
 			item.toString()
 		pfx + str + "\n"
+
+class TokenInfo
+	constructor : (list) ->
+		[@type, @text, @startLine, @startColumn, @endLine, @endColumn] = list
+	
+	@create = (info...) -> new TokenInfo(info)
+	
+	visit : (fn) ->
+		fn(@type, @text, @startLine, @startColumn, @endLine, @endColumn)
+	
+	toString : () -> @text
+	toLogString : () ->
+		"[" +
+		"#{@startLine}:#{@startColumn}-#{@endLine}:#{@endColumn} " +
+		"#{@type} #{JSON.stringify(@text)}]"
+
+exports.createTokenInfo = TokenInfo.create
 
 class Node
 	nodeType : "Node"

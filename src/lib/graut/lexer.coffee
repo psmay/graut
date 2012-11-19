@@ -67,6 +67,8 @@ SOFTWARE.
 # are counted as one column regardless of input encoding. (They don't appear in
 # valid UTF-8 or UTF-32, but many implementations don't enforce this.)
 
+{ createTokenInfo } = require './model'
+
 FIRST_LINE = 1
 FIRST_COLUMN = 1
 
@@ -100,20 +102,7 @@ Lexer = (exports ? this).Lexer =
 			console.log "fat token is #{@yytext.toLogString()}"
 			type
 
-class TokenInfo
-	constructor : (list) ->
-		[@type, @text, @startLine, @startColumn, @endLine, @endColumn] = list
-	
-	@create = (info...) -> new TokenInfo(info)
-	
-	visit : (fn) ->
-		fn(@type, @text, @startLine, @startColumn, @endLine, @endColumn)
-	
-	toString : () -> @text
-	toLogString : () ->
-		"[" +
-		"#{@startLine}:#{@startColumn}-#{@endLine}:#{@endColumn} " +
-		"#{@type} #{JSON.stringify(@text)}]"
+
 
 
 
@@ -147,7 +136,7 @@ class PullTokenizer
 class PushTokenizer
 	constructor: (input, callback) ->
 		@_session = new TokenizerSession input, (stats...) =>
-			callback(TokenInfo.create(stats...))
+			callback(createTokenInfo(stats...))
 	run : () -> @_session.run()
 	unfinished : () -> @_session.unfinished()
 	runAll : () -> @run() while @unfinished()
