@@ -82,8 +82,7 @@ class Node
 	nodeType : "Node"
 	
 	constructor: (@token) ->
-		if @token isnt null and not @token.text?
-			throw new Error "Assert failed: #{@token} is not a token"
+		assertTokenOrUnused @token
 	
 	toString : () -> @toPrefixedString("")
 	
@@ -103,56 +102,69 @@ extend exports,
 	InterpolatedValue: class InterpolatedValue extends Node
 		nodeType : "Interpolated"
 		constructor: ({ @values, @startToken, @endToken }) ->
+			super @startToken
 			assertTokenOrUnused @startToken
 			assertTokenOrUnused @endToken
 			assertArray @values
+		visit: (obj) -> obj.interpolatedValue @
 	
 	StringValue: class StringValue extends Node
 		nodeType : "String"
 		constructor: ({ @textToken, @doBslashEscapes, @openToken, @closeToken }) ->
+			super @textToken
 			assertTokenOrUnused @openToken
 			assertTokenOrUnused @closeToken
 			assertToken @textToken
 			@doBslashEscapes ?= false
 			assertBoolean @doBslashEscapes
+		visit: (obj) -> obj.stringValue @
 
 	ListValue: class ListValue extends Node
 		nodeType : "List"
 		constructor: ({ @values, @openToken, @closeToken }) ->
+			super @openToken
 			assertToken @openToken
 			assertToken @closeToken
 			assertArray @values
+		visit: (obj) -> obj.listValue @
 
 	InlineOp: class InlineOp extends Node
 		nodeType : "Inline"
 		constructor: ({ @sigilToken, @topic }) ->
+			super @sigilToken
 			assertToken @sigilToken
 			assertNode @topic
+		visit: (obj) -> obj.inlineOp @
 
 	ExpandOp: class ExpandOp extends Node
 		nodeType : "Expand"
 		constructor: ({ @sigilToken, @topic }) ->
+			super @sigilToken
 			assertToken @sigilToken
 			assertNode @topic
+		visit: (obj) -> obj.expandOp @
 
 	CallOp: class CallOp extends Node
 		nodeType : "Call"
 		constructor: ({ @sigilToken, @topic }) ->
+			super @sigilToken
 			assertToken @sigilToken
 			assertNode @topic
+		visit: (obj) -> obj.callOp @
 	
 	NonceOp: class NonceOp extends Node
 		nodeType : "Nonce"
 		constructor: ({ @sigilToken }) ->
+			super @sigilToken
 			assertToken @sigilToken
+		visit: (obj) -> obj.nonceOp @
 	
 	semanticError: (tokenInfo, message) ->
+		tokenInfo = tokenInfo.token if Object(tokenInfo) instanceof Node
 		locator = if tokenInfo?
 			"#{tokenInfo.startLine}:#{tokenInfo.startColumn}: "
 		else
 			""
 		message ?= "Assert failed"
 
-		console.log "parseError called with ", tokenInfo, message
-		console.log "---"
 		throw new Error "#{locator}#{message}"

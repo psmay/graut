@@ -22,7 +22,78 @@ SOFTWARE.
 ###
 
 Model = require './model'
+{ InterpolatedValue, StringValue, ListValue, InlineOp, ExpandOp, CallOp, NonceOp, semanticError } = Model
 
-exports.walk = (top) ->
-	# TODO
-	throw Error "TODO"
+callUnhandled = (obj) -> @unhandled obj
+
+class Visitable
+	constructor : (overrides) ->
+		overrides ?= {}
+		for own k, v of overrides
+			@[k] = v
+	
+	unhandled : (obj) -> semanticError obj, "Unexpected item"
+	interpolatedValue : callUnhandled
+	stringValue : callUnhandled
+	listValue : callUnhandled
+	inlineOp : callUnhandled
+	expandOp : callUnhandled
+	callOp : callUnhandled
+	nonceOp : callUnhandled
+	
+walkVisitable = new Visitable
+	interpolatedValue : (node) -> walkInterpolated node
+
+exports.walk = (top) -> top.visit walkVisitable
+
+
+interpElementVisitable = new Visitable
+	stringValue : (node) -> textOfStringValue node
+	callOp : (node) -> walkCallOp node
+
+walkInterpolated = (node) -> node.visit interpElementVisitable
+
+
+codepointToString = (cp) ->
+	adj = (cp - 0x10000) & 0xFFFFF
+	throw Error("Invalid codepoint " + cp) if cp isnt (adj + 0x10000)
+	hi = adj >> 10
+	lo = adj & 0x3FF
+	String.fromCharCode(0xD800 + hi) + String.fromCharCode(0xDC00 + lo)
+
+
+stringTextVisitable = new Visitable
+	stringValue : (node) ->
+		text = node.textToken.text
+		if node.doBslashEscapes
+			text = text.replace ///
+				\\(?:
+					U([0-9A-Fa-f]{8}) |
+					u(?:
+						([0-9A-Fa-f]{4})
+						\{ ([0-9A-Fa-f]+) \}
+					) |
+					x([0-9A-Fa-f]{2}) |
+					([bfnrt0]) |
+					([\s\S])
+				) ///g,
+				(fullMatch, x8, x4, xarb, x2, letter, any) ->
+					hex = x8 ? x4 ? xarb ? x2
+					if hex?
+						codepointToString parseInt hex, 16
+					else if letter?
+						switch letter
+							when "b" then "\b"
+							when "f" then "\f"
+							when "n" then "\n"
+							when "r" then "\r"
+							when "t" then "\t"
+							when "0" then "\0"
+					else
+						any
+		text
+
+
+textOfStringValue = (node) -> node.visit stringTextVisitable
+	
+
