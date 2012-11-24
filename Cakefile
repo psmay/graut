@@ -145,4 +145,5 @@ task 'test', 'perform a nominal test', (cb) ->
 	invoke 'build'
 	main = require "#{DIST_LIBS}/main"
 	out = main.parseFile "test-input/1.txt"
-	console.log out.toString()
+	#console.log out.toString()
+	console.log JSON.stringify(out, null, "  ")

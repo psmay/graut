@@ -43,7 +43,6 @@ assertTokenOrUnused = (item) -> assertType "token or unused", item, isTokenOrUnu
 
 
 
-TAB = "  "
 
 render = (item, pfx) ->
 	if not item?
@@ -70,6 +69,16 @@ class Token
 	visit : (fn) ->
 		fn(@type, @text, @startLine, @startColumn, @endLine, @endColumn)
 	
+	toJSON : () ->
+		["token",
+			type : @type
+			text : @text
+			startLine : @startLine
+			startColumn : @startColumn
+			endLine : @endLine
+			endColumn : @endColumn
+		]
+	
 	toString : () -> @text
 	toLogString : () ->
 		"[" +
@@ -78,15 +87,44 @@ class Token
 
 exports.createToken = Token.create
 
+# Copy "own" properties from other objects onto this object. As a special case,
+# the undefined value will delete the key from the target object. The maps are
+# overlaid in order, so if a property exists in multiple maps, the value from
+# the latest list prevails. Similarly, a later undefined value will delete the
+# earlier value while a later defined value will re-create a key that has been
+# deleted.
+combineMapsOnto = (out, maps...) ->
+	for map in maps
+		for own k,v of map
+			if v is undefined and Object::hasOwnProperty.call(out,k)
+				delete out[k]
+			else
+				out[k] = v
+			undefined # no collectible output
+	out
+				
+
+TAB = "  "
 class Node
 	nodeType : "Node"
 	
-	constructor: (@token) ->
-		assertTokenOrUnused @token
+	constructor: (token) ->
+		assertTokenOrUnused token
+		if token?
+			@line = token.startLine
+			@column = token.startColumn
 	
 	toString : () -> @toPrefixedString("")
 	
+	properties : () ->
+		combineMapsOnto {},
+			line : @line
+			column : @column
 	
+	toJSON : () ->
+		p = {}
+		[ @nodeType, @properties() ]
+		
 	toPrefixedString : (pfx) ->
 		text = []
 		text.push pfx + "[#{@nodeType}]\n"
@@ -107,6 +145,12 @@ extend exports,
 			assertTokenOrUnused @endToken
 			assertArray @values
 		visit: (obj) -> obj.interpolatedValue @
+		toJSON : () ->
+			super.concat @values
+		properties : () ->
+			combineMapsOnto super,
+				startToken : @startToken
+				endToken : @endToken
 	
 	StringValue: class StringValue extends Node
 		nodeType : "String"
@@ -118,6 +162,12 @@ extend exports,
 			@doBslashEscapes ?= false
 			assertBoolean @doBslashEscapes
 		visit: (obj) -> obj.stringValue @
+		properties : () ->
+			combineMapsOnto super,
+				textToken : @textToken
+				doBslashEscapes : @doBslashEscapes
+				openToken : @openToken
+				closeToken : @closeToken
 
 	ListValue: class ListValue extends Node
 		nodeType : "List"
@@ -127,6 +177,13 @@ extend exports,
 			assertToken @closeToken
 			assertArray @values
 		visit: (obj) -> obj.listValue @
+		toJSON : () ->
+			super.concat @values
+		properties : () ->
+			combineMapsOnto super,
+				openToken : @openToken
+				closeToken : @closeToken
+		
 
 	InlineOp: class InlineOp extends Node
 		nodeType : "Inline"
@@ -135,6 +192,11 @@ extend exports,
 			assertToken @sigilToken
 			assertNode @topic
 		visit: (obj) -> obj.inlineOp @
+		toJSON : () ->
+			super.concat [@topic]
+		properties : () ->
+			combineMapsOnto super,
+				sigilToken : @sigilToken
 
 	ExpandOp: class ExpandOp extends Node
 		nodeType : "Expand"
@@ -143,6 +205,11 @@ extend exports,
 			assertToken @sigilToken
 			assertNode @topic
 		visit: (obj) -> obj.expandOp @
+		toJSON : () ->
+			super.concat [@topic]
+		properties : () ->
+			combineMapsOnto super,
+				sigilToken : @sigilToken
 
 	CallOp: class CallOp extends Node
 		nodeType : "Call"
@@ -151,6 +218,11 @@ extend exports,
 			assertToken @sigilToken
 			assertNode @topic
 		visit: (obj) -> obj.callOp @
+		toJSON : () ->
+			super.concat [@topic]
+		properties : () ->
+			combineMapsOnto super,
+				sigilToken : @sigilToken
 	
 	NonceOp: class NonceOp extends Node
 		nodeType : "Nonce"
@@ -158,6 +230,9 @@ extend exports,
 			super @sigilToken
 			assertToken @sigilToken
 		visit: (obj) -> obj.nonceOp @
+		properties : () ->
+			combineMapsOnto super,
+				sigilToken : @sigilToken
 	
 	semanticError: (tokenInfo, message) ->
 		tokenInfo = tokenInfo.token if Object(tokenInfo) instanceof Node
