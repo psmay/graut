@@ -32,9 +32,9 @@ o = (elements...) -> elements
 
 parserSpec = dsl.convertToParserSpec 'Top',
 	Top: [
-		o '', -> new InterpolatedValue
+		o '', -> new InterpolatedNode
 			values: []
-		o 'TopElements', -> new InterpolatedValue
+		o 'TopElements', -> new InterpolatedNode
 			values: $1
 	]
 	TopElements: [
@@ -46,7 +46,7 @@ parserSpec = dsl.convertToParserSpec 'Top',
 		o 'Sigiled', -> $1
 	]
 	TopText: [
-		o 'TEXT', -> new StringValue
+		o 'TEXT', -> new StringNode
 			textToken: $1
 	]
 	Sigiled: [
@@ -58,16 +58,16 @@ parserSpec = dsl.convertToParserSpec 'Top',
 					when "$" then new EmptyOp
 						sigilToken: sigil
 					else semanticError sigil, "This sigil requires a topic"
-			else if elem instanceof InlineOp
+			else if elem instanceof InlineNode
 				semanticError elem, "Inlined elements cannot be used as sigil topic"
 			else switch sigil.text
-				when "#" then new CallOp
+				when "#" then new CallNode
 					sigilToken: sigil
 					topic: elem
-				when "$" then new ExpandOp
+				when "$" then new ExpandNode
 					sigilToken: sigil
 					topic: elem
-				when "@" then new InlineOp
+				when "@" then new InlineNode
 					sigilToken: sigil
 					topic: elem
 				else semanticError sigil, "Assert failed: Unrecognized sigil"
@@ -105,7 +105,7 @@ parserSpec = dsl.convertToParserSpec 'Top',
 		o 'SpaceOpt SsElementsOpt', -> $2
 	]
 	List: [
-		o 'DOWN ListContents UP', -> new ListValue
+		o 'DOWN ListContents UP', -> new ListNode
 			openToken: $1
 			values: $2
 			closeToken: $3
@@ -120,11 +120,11 @@ parserSpec = dsl.convertToParserSpec 'Top',
 		o 'DeepHeredoc', -> $1
 	]
 	UnquotedString: [
-		o 'STRING0', -> new StringValue
+		o 'STRING0', -> new StringNode
 			textToken: $1
 	]
 	TriquotedString: [
-		o 'STRING3START TriquotedText STRING3END', -> new StringValue
+		o 'STRING3START TriquotedText STRING3END', -> new StringNode
 			textToken: $2
 			openToken: $1
 			closeToken: $3
@@ -134,7 +134,7 @@ parserSpec = dsl.convertToParserSpec 'Top',
 		o '', -> ''
 	]
 	ShallowHeredoc: [
-		o 'SHSTART ShallowHeredocText SHEND', -> new StringValue
+		o 'SHSTART ShallowHeredocText SHEND', -> new StringNode
 			textToken: $2
 			openToken: $1
 			closeToken: $3
@@ -145,7 +145,7 @@ parserSpec = dsl.convertToParserSpec 'Top',
 	]
 	MonoquotedString: [
 		o 'STRING1START MonoquotedPartsOpt STRING1END', ->
-			new InterpolatedValue
+			new InterpolatedNode
 				values: $2
 				startToken: $1
 				endToken: $3
@@ -163,13 +163,13 @@ parserSpec = dsl.convertToParserSpec 'Top',
 		o 'Sigiled', -> $1
 	]
 	MonoquotedText: [
-		o 'STRING1TEXT', -> new StringValue
+		o 'STRING1TEXT', -> new StringNode
 			textToken: $1
 			doBslashEscapes: true
 	]
 	DeepHeredoc: [
 		o 'DHSTART DeepHeredocPartsOpt DHEND', ->
-			new InterpolatedValue
+			new InterpolatedNode
 				values: $2
 				startToken: $1
 				endToken: $3
@@ -187,7 +187,7 @@ parserSpec = dsl.convertToParserSpec 'Top',
 		o 'Sigiled', -> $1
 	]
 	DeepHeredocText: [
-		o 'DHTEXT', -> new StringValue
+		o 'DHTEXT', -> new StringNode
 			textToken: $1
 			doBslashEscapes: true
 	]

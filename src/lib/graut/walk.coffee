@@ -22,7 +22,7 @@ SOFTWARE.
 ###
 
 Model = require './model'
-{ InterpolatedValue, StringValue, ListValue, InlineOp, ExpandOp, CallOp, NonceOp, semanticError } = Model
+{ InterpolatedNode, StringNode, ListNode, InlineNode, ExpandNode, CallNode, NonceNode, semanticError } = Model
 
 callUnhandled = (obj) -> @unhandled obj
 
@@ -48,8 +48,8 @@ exports.walk = (top) -> top.visit walkVisitable
 
 
 interpElementVisitable = new Visitable
-	stringValue : (node) -> textOfStringValue node
-	callOp : (node) -> walkCallOp node
+	stringValue : (node) -> textOfStringNode node
+	callOp : (node) -> walkCallNode node
 
 walkInterpolated = (node) -> node.visit interpElementVisitable
 
@@ -94,6 +94,6 @@ stringTextVisitable = new Visitable
 		text
 
 
-textOfStringValue = (node) -> node.visit stringTextVisitable
+textOfStringNode = (node) -> node.visit stringTextVisitable
 	
 

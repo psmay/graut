@@ -137,7 +137,7 @@ class Node
 
 
 extend exports,
-	InterpolatedValue: class InterpolatedValue extends Node
+	InterpolatedNode: class InterpolatedNode extends Node
 		nodeType : "Interpolated"
 		constructor: ({ @values, @startToken, @endToken }) ->
 			super @startToken
@@ -152,7 +152,7 @@ extend exports,
 				startToken : @startToken
 				endToken : @endToken
 	
-	StringValue: class StringValue extends Node
+	StringNode: class StringNode extends Node
 		nodeType : "String"
 		constructor: ({ @textToken, @doBslashEscapes, @openToken, @closeToken }) ->
 			super @textToken
@@ -169,7 +169,7 @@ extend exports,
 				openToken : @openToken
 				closeToken : @closeToken
 
-	ListValue: class ListValue extends Node
+	ListNode: class ListNode extends Node
 		nodeType : "List"
 		constructor: ({ @values, @openToken, @closeToken }) ->
 			super @openToken
@@ -185,7 +185,7 @@ extend exports,
 				closeToken : @closeToken
 		
 
-	InlineOp: class InlineOp extends Node
+	InlineNode: class InlineNode extends Node
 		nodeType : "Inline"
 		constructor: ({ @sigilToken, @topic }) ->
 			super @sigilToken
@@ -198,7 +198,7 @@ extend exports,
 			combineMapsOnto super,
 				sigilToken : @sigilToken
 
-	ExpandOp: class ExpandOp extends Node
+	ExpandNode: class ExpandNode extends Node
 		nodeType : "Expand"
 		constructor: ({ @sigilToken, @topic }) ->
 			super @sigilToken
@@ -211,7 +211,7 @@ extend exports,
 			combineMapsOnto super,
 				sigilToken : @sigilToken
 
-	CallOp: class CallOp extends Node
+	CallNode: class CallNode extends Node
 		nodeType : "Call"
 		constructor: ({ @sigilToken, @topic }) ->
 			super @sigilToken
@@ -224,7 +224,7 @@ extend exports,
 			combineMapsOnto super,
 				sigilToken : @sigilToken
 	
-	NonceOp: class NonceOp extends Node
+	NonceNode: class NonceNode extends Node
 		nodeType : "Nonce"
 		constructor: ({ @sigilToken }) ->
 			super @sigilToken
