@@ -1,0 +1,93 @@
+#!/usr/bin/perl
+
+use 5.010;
+use warnings;
+use strict;
+use Carp;
+
+use JSON;
+
+undef $/;
+
+my $input = <>;
+my $h = decode_json $input;
+
+sub uniq {
+	my %seen = ();
+	return grep {
+		if(not $seen{$_}) { $seen{$_} = 1; 1; }
+		else { 0 }
+	} @_;
+}
+my @types = uniq(qw/Location Token Node/, sort keys %$h);
+
+say <<EOF ;
+
+owns = Object::hasOwnProperty
+ostring = Object::toString
+
+combineMapsOnto = (out, maps...) ->
+	for map in maps
+		for own k,v of map
+			if v is undefined and owns.call(out,k)
+				delete out[k]
+			else
+				out[k] = v
+			undefined # no collectible output
+	out
+
+assertType = (expected, value, test) ->
+	unless test value
+		throw Error "Assert failed: Wrong type; expected #{expected}, got #{value}"
+
+EOF
+
+my %tests = (
+	boolean => "Boolean(v) is v",
+	list => "ostring.call(v) is '[object Array]'",
+	location => "v instanceof Location",
+	node => "v instanceof Node",
+	string => "typeof v is 'string'",
+	token => "v instanceof Token",
+	uint => "(v >>> 0) is v"
+);
+
+for(sort keys %tests) {
+	my $c = $_;
+	$c =~ s/^([a-z])/uc($1)/e;
+	say "assert$c = (v) -> assertType \"$_\", v, (v) -> $tests{$_}";
+}
+
+say "";
+
+say "combineMapsOnto exports,";
+
+for my $typeName (@types) {
+	my $type = $h->{$typeName};
+	my $order = $type->{parameterOrder};
+	my $params = $type->{parameters};
+	my $hasSuper = defined($type->{extends});
+	my $extends = $hasSuper ? " extends $type->{extends}" : "";
+	say "	$typeName: class $typeName$extends";
+	say "		typeName: \"$typeName\"";
+	my $ctorParams = join(", ", map { "\@$_" } @$order);
+	say "		constructor: ({ $ctorParams }) ->";
+	for my $paramName (@$order) {
+		my $a = "\@$paramName";
+		my $param = $params->{$paramName};
+		my $t = $param->{type};
+		my $capt = $t;
+		$capt =~ s/^([a-z])/uc($1)/e;
+		my $o = $param->{optional};
+		my $ifc = $o ? " if $a?" : "";
+		say "			$a ?= false" if $t eq 'boolean';
+		say "			assert$capt $a$ifc";
+	}
+	say "		toJSON: () ->";
+	say "			combineMapsOnto " . +($hasSuper ? "super" : "{}") . ",";
+	say "				__type__ : \@typeName";
+	for my $paramName (@$order) {
+		say "				$paramName : \@$paramName";
+	}
+	say "	";
+}

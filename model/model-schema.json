@@ -1,0 +1,64 @@
+{
+	"Location" : {
+		"parameterOrder" : [ "line", "column" ],
+		"parameters" : {
+			"line" : { "type" : "uint" },
+			"column" : { "type" : "uint" }
+		}
+	},
+	"Token" : {
+		"parameterOrder" : [ "type", "text", "start", "end" ],
+		"parameters" : {
+			"type" : { "type" : "string" },
+			"text" : { "type" : "string" },
+			"start" : { "type" : "location" },
+			"end" : { "type" : "location" }
+		}
+	},
+	"Node" : {
+		"parameterOrder" : [ "start" ],
+		"parameters" : {
+			"start" : { "type" : "location", "optional" : true }
+		}
+	},
+	"InterpolatedNode" : {
+		"extends" : "Node",
+		"nodeType" : "Interpolated",
+		"parameterOrder" : [ "startToken", "endToken", "values" ],
+		"parameters" : {
+			"startToken" : { "type" : "token", "optional" : true },
+			"endToken" : { "type" : "token", "optional" : true },
+			"values" : { "type" : "list" }
+		}
+	},
+	"StringNode" : {
+		"extends" : "Node",
+		"nodeType" : "String",
+		"parameterOrder" : [ "textToken", "doBslashEscapes", "openToken", "closeToken" ],
+		"parameters" : {
+			"textToken" : { "type" : "token" },
+			"doBslashEscapes" : { "type" : "boolean" },
+			"openToken" : { "type" : "token", "optional" : true },
+			"closeToken" : { "type" : "token", "optional" : true }
+		}
+	},
+	"ListNode" : {
+		"extends" : "Node",
+		"nodeType" : "List",
+		"parameterOrder" : [ "openToken", "closeToken", "values" ],
+		"parameters" : {
+			"openToken" : { "type" : "token" },
+			"closeToken" : { "type" : "token" },
+			"values" : { "type" : "list" }
+		}
+	},
+	"SigilNode" : {
+		"extends" : "Node",
+		"nodeType" : "UnarySigil",
+		"parameterOrder" : [ "sigilToken", "topic" ],
+		"parameters" : {
+			"sigilToken" : { "type" : "token" },
+			"topic" : { "type" : "node", "optional" : true }
+		}
+	}
+}
