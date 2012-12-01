@@ -49,10 +49,10 @@ SOFTWARE.
 # The token values returned are an object type that has these properties:
 #	token.type (string)
 #	token.text (string)
-#	token.startLine (int, 1-based)
-#	token.startColumn (int, 1-based)
-#	token.endLine (int, 1-based)
-#	token.endColumn (int 1-based, position after, not at, end)
+#	token.start.line (int, 1-based)
+#	token.start.column (int, 1-based)
+#	token.end.line (int, 1-based)
+#	token.end.column (int 1-based, position after, not at, end)
 # And these methods:
 #	token.visit (type,text,startLine,endLine,startColumn,endColumn) -> ...
 #	token.toString() # returns token.text()
@@ -67,7 +67,7 @@ SOFTWARE.
 # are counted as one column regardless of input encoding. (They don't appear in
 # valid UTF-8 or UTF-32, but many implementations don't enforce this.)
 
-{ createToken } = require './model'
+{ Token, Location } = require './model'
 
 FIRST_LINE = 1
 FIRST_COLUMN = 1
@@ -92,14 +92,11 @@ Lexer = (exports ? this).Lexer =
 			fl = if @_sourceKey? then "#{@_sourceKey}:" else ""
 			"#{fl}#{@yylineno + FIRST_LINE}:#{@_positionNumber}:"
 		lex : () ->
-			console.log "Lex called"
 			type = ""
 			gotNext = @pullSession.tryNext (ext) =>
 				@yytext = ext
 				@_setPosition(ext.startLine - FIRST_LINE, ext.startColumn)
 				type = ext.type
-			console.log "gotNext: #{gotNext}"
-			console.log "fat token is #{@yytext.toLogString()}"
 			type
 
 
@@ -132,6 +129,16 @@ class PullTokenizer
 		t = @buffer.shift()
 		if isFunction handler then handler(t) else t
 
+createToken = (type, text, startLine, startColumn, endLine, endColumn) ->
+	new Token
+		type: type
+		text: text
+		start: new Location
+			line: startLine
+			column: startColumn
+		end: new Location
+			line: endLine
+			column: endColumn
 
 class PushTokenizer
 	constructor: (input, callback) ->
@@ -218,7 +225,6 @@ class TokenizerSession
 		lpost = @line
 		cpost = @column
 		
-		console.log "Lexer emits #{tokenName} #{lpre}:#{cpre} #{lpost}:#{cpost}"
 		@callback(tokenName, text, lpre, cpre, lpost, cpost)
 		
 
@@ -426,7 +432,6 @@ deepHereMode = (name) ->
 				(>#{name}>>)
 			)
 		///
-	#console.log("Deep pattern : ", pattern)
 	@match "deep heredoc end or function call",
 		pattern,
 		(all, text, call, close) ->

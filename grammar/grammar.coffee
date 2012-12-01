@@ -50,27 +50,9 @@ parserSpec = dsl.convertToParserSpec 'Top',
 			textToken: $1
 	]
 	Sigiled: [
-		o 'SIGIL Topic',	->
-			sigil = $1
-			elem = $2
-			if elem is null
-				switch sigil.text
-					when "$" then new EmptyOp
-						sigilToken: sigil
-					else semanticError sigil, "This sigil requires a topic"
-			else if elem instanceof InlineNode
-				semanticError elem, "Inlined elements cannot be used as sigil topic"
-			else switch sigil.text
-				when "#" then new CallNode
-					sigilToken: sigil
-					topic: elem
-				when "$" then new ExpandNode
-					sigilToken: sigil
-					topic: elem
-				when "@" then new InlineNode
-					sigilToken: sigil
-					topic: elem
-				else semanticError sigil, "Assert failed: Unrecognized sigil"
+		o 'SIGIL Topic',	-> new SigilNode
+			sigilToken: $1
+			topic: $2 ? undefined
 	]
 	Topic: [
 		o 'Element', -> $1

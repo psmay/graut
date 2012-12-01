@@ -85,7 +85,7 @@ for my $typeName (@types) {
 	}
 	say "		toJSON: () ->";
 	say "			combineMapsOnto " . +($hasSuper ? "super" : "{}") . ",";
-	say "				__type__ : \@typeName";
+	say "				\":type\" : \@typeName";
 	for my $paramName (@$order) {
 		say "				$paramName : \@$paramName";
 	}

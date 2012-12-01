@@ -33,6 +33,8 @@ DIST_LIBS = "#{DIST}/lib/graut"
 SRC = "./src"
 GRAMMAR = "./grammar"
 GRAMMAR_DEST = "#{DIST_LIBS}/parser.js"
+MODEL = "./model"
+MODEL_COFFEE = "#{BUILD}/model.coffee"
 
 # Run coffee
 coffee = (args, cb) ->
@@ -46,6 +48,11 @@ coffee = (args, cb) ->
 coffeeco = (srcFile, destDir, cb) ->
 	console.log "Compile #{srcFile} into #{destDir}"
 	coffee ['-c', '-o', destDir, srcFile], cb
+
+# Compile model schema to coffee
+modelJsonToCoffee = (srcFile, destFile) ->
+	console.log "Compile model schema #{srcFile} to #{destFile}"
+	exec "#{MODEL}/model-json-to-coffee < #{srcFile} > #{destFile}", (err) -> throw err if err
 
 # Run mkdir -p
 mkdirp = (dir) ->
@@ -111,6 +118,7 @@ buildAll = (cb) ->
 	buildDirectCopies cb
 	buildLibs cb
 	buildParser cb
+	buildModel cb
 
 task 'build', 'build graut from source', buildAll
 
@@ -135,6 +143,13 @@ buildParser = (cb) ->
 	output = jsNotice + output
 	fs.writeFileSync destFile, jsNotice + output
 
+buildModel = (cb) ->
+	srcModel = "#{MODEL}/model-schema.json"
+	imCoffee = MODEL_COFFEE
+	modelJsonToCoffee srcModel, imCoffee
+	coffeeco imCoffee, DIST_LIBS
+
+	
 
 task 'clean', 'remove build files', (cb) ->
 	exec "rm -rf #{BUILD}", (err) ->
