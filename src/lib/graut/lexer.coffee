@@ -76,7 +76,7 @@ Lexer = (exports ? this).Lexer =
 	pullTokenizer : (input) ->
 		return new PullTokenizer(input)
 	pushTokenizer : (input, callback) ->
-		return new TokenizerSession(input, callback)
+		return new PushTokenizer(input, callback)
 	
 	jisonLexer : () ->
 		setSourceKey : (str) -> @_sourceKey
