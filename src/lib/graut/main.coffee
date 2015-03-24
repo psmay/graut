@@ -30,7 +30,7 @@ Model = require './model'
 exports.parse = parse = (string) ->
 	if string.length > 0 and string.charCodeAt(0) is 0xFEFF
 		# Strip BOM. Nasty thing.
-		string = string.slice 0
+		string = string.slice 1
 	parser.parse string
 
 exports.parseFile = parseFile = (filename, encoding) ->
