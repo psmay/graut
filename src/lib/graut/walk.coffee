@@ -55,11 +55,14 @@ walkInterpolated = (node) -> node.visit interpElementVisitable
 
 
 codepointToString = (cp) ->
-	adj = (cp - 0x10000) & 0xFFFFF
-	throw Error("Invalid codepoint " + cp) if cp isnt (adj + 0x10000)
-	hi = adj >> 10
-	lo = adj & 0x3FF
-	String.fromCharCode(0xD800 + hi) + String.fromCharCode(0xDC00 + lo)
+	if cp is (cp & 0xFFFF)
+		String.fromCharCode(cp)
+	else
+		adj = (cp - 0x10000) & 0xFFFFF
+		throw Error("Invalid codepoint " + cp) if cp isnt (adj + 0x10000)
+		hi = adj >> 10
+		lo = adj & 0x3FF
+		String.fromCharCode(0xD800 + hi) + String.fromCharCode(0xDC00 + lo)
 
 
 stringTextVisitable = new Visitable
@@ -70,7 +73,7 @@ stringTextVisitable = new Visitable
 				\\(?:
 					U([0-9A-Fa-f]{8}) |
 					u(?:
-						([0-9A-Fa-f]{4})
+						([0-9A-Fa-f]{4}) |
 						\{ ([0-9A-Fa-f]+) \}
 					) |
 					x([0-9A-Fa-f]{2}) |
